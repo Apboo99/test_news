@@ -1,11 +1,18 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_navigation/get_navigation.dart';
+import 'package:test_news/common/routes/names.dart';
+import 'package:test_news/pages/sign_in/bloc/sign_in_bloc.dart';
+import 'package:test_news/pages/sign_in/bloc/sign_in_state.dart';
+import 'package:test_news/controller/sign_in_controller.dart';
 import 'package:test_news/widgets/flutter_toast.dart';
 
 
-import '../widgets/const_widgets.dart';
+import '../../common/services/global.dart';
+import '../../common/values/constant.dart';
+import '../../widgets/const_widgets.dart';
 class SignIn extends StatefulWidget {
   const SignIn({Key? key}) : super(key: key);
 
@@ -14,24 +21,21 @@ class SignIn extends StatefulWidget {
 }
 
 class _SignInState extends State<SignIn> {
-  final formKey = GlobalKey<FormState>();
-  TextEditingController emailController = TextEditingController();
-  TextEditingController passwordController = TextEditingController();
-  final auth = FirebaseAuth.instance;
+  // final formKey = GlobalKey<FormState>();
+  // TextEditingController emailController = TextEditingController();
+  // TextEditingController passwordController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
-
-
-    // bool? isCheck = false;
-    // bool? newwCheck;
     final width = MediaQuery.of(context).size.width;
     final height = MediaQuery.of(context).size.height;
-    return  Scaffold(
+    return  BlocBuilder<SignInBloc, SignInState>(
+  builder: (context, state) {
+    return Scaffold(
         backgroundColor: Colors.grey.shade100,
         body: SafeArea(
           child: Form(
-            key: formKey,
+            // key: formKey,
             child: SingleChildScrollView(
               child: Container(
                 margin: const EdgeInsets.symmetric(vertical: 70,horizontal: 30),
@@ -57,21 +61,21 @@ class _SignInState extends State<SignIn> {
                         typeText: TextInputType.emailAddress,
                         textForCheck: "email", iconData: Icons.email,
                         eye: Icons.remove_red_eye,
-                        controller: emailController,
                         func: (String value) {
-                      emailController.text = value;
+                          context.read<SignInBloc>().add(EmailEvent(value));
                         }, textInputAction: TextInputAction.next,
-                        validator: (value) {
-                      if(value!.isEmpty){
-                        return "please enter your email";
-                        // ScaffoldMessenger.of(context).
-                        // showSnackBar(SnackBar(content: Text("please enter your email")));
-                      }
-                      if(!RegExp('^[a-zA-Z0-9+_.-]+@[a-zA-Z0-9.-]+.[a-z]').hasMatch(value)){
-                          return "please enter a valid email";
-                      }
-                      return "";
-                        }
+                      //   validator: (value) {
+                      // if(value!.isEmpty){
+                      //   return "please enter your email";
+                      //   // ScaffoldMessenger.of(context).
+                      //   // showSnackBar(SnackBar(content: Text("please enter your email")));
+                      // }
+                      // if(!RegExp('^[a-zA-Z0-9+_.-]+@[a-zA-Z0-9.-]+.[a-z]').hasMatch(value)){
+                      //     return "please enter a valid email";
+                      // }
+                      // return null;
+                      //   },
+                        // controller: emailController
                     ),
                     const SizedBox(height: 15,),
 
@@ -88,20 +92,18 @@ class _SignInState extends State<SignIn> {
                         textForCheck: "password",
                         iconData: Icons.lock,
                         eye: Icons.remove_red_eye,
-                        controller: passwordController,
                         func: (String value) {
-                      passwordController.text = value;
+                          context.read<SignInBloc>().add(PasswordEvent(value));
                         }, textInputAction: TextInputAction.done,
-                        validator: (value) {
-                          if(value!.isEmpty){
-                            return "enter your password!";
-                          }
-
-                          if(!RegExp(r'^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[!@#\$&*~]).{8,}$').hasMatch(value)){
-                            return "enter a valid password!!(min 6 character)";
-                          }
-                          return "";
-                        }
+                        // validator: (value) {
+                        //   if(value!.isEmpty){
+                        //     return "enter your password!";
+                        //   }
+                        //   if(!RegExp(r'^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[!@#\$&*~]).{8,}$').hasMatch(value)){
+                        //     return "enter a valid password!!(min 6 character)";
+                        //   }
+                        //   return null;
+                        // }, controller: passwordController
                     ),
 
                     const SizedBox(height: 5,),
@@ -130,7 +132,10 @@ class _SignInState extends State<SignIn> {
                         text: "Login",
                         colorOfText: Colors.white,
                         onTaps: (){
-                          handleSignIn(emailController.text,passwordController.text);
+                          Global.storageServices
+                              .setBool(AppConstant.onUserLogin, true);
+                          SignInController(context: context)
+                              .handleSignIn("email");
                           // Navigator.of(context).pushNamed("/home");
                         }),
                     const SizedBox(height: 20,),
@@ -154,7 +159,7 @@ class _SignInState extends State<SignIn> {
                         verySmallText(text: "don't have an account?", color: Colors.grey),
                         GestureDetector(
                           onTap: (){
-                            Get.toNamed("/");
+                            Navigator.of(context).pushNamed(AppRoutes.signUp);
                           },
                             child: smallText(text:"sign up", color: Colors.blue))
                       ],
@@ -168,18 +173,20 @@ class _SignInState extends State<SignIn> {
           ),
         )
     );
+  },
+);
   }
- void handleSignIn(String email,String password)async{
-    if(formKey.currentState!.validate()){
-      await auth.signInWithEmailAndPassword(email: email, password: password).
-      then((uid) => {
-        toastInfo(message: "login success"),
-        Get.off("/home"),
-      }).catchError((e){
-        ScaffoldMessenger.of(context).
-        showSnackBar( SnackBar(content: Text(e.toString())));
-      }
-      );
-    }
-  }
+ // void handleSignIn(String email,String password)async{
+ //    if(formKey.currentState!.validate()){
+ //      await auth.signInWithEmailAndPassword(email: email, password: password).
+ //      then((uid) => {
+ //        toastInfo(message: "login success"),
+ //        Get.toNamed("/home"),
+ //      }).catchError((e){
+ //        ScaffoldMessenger.of(context).
+ //        showSnackBar( SnackBar(content: Text(e.toString())));
+ //      }
+ //      );
+ //    }
+ //  }
 }
